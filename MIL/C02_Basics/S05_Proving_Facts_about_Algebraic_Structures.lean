@@ -282,5 +282,8 @@ example (x y : X) : 0 ≤ dist x y := by
   have h := dist_triangle x y x
   rw [dist_self x, dist_comm y x] at h
   rw [← two_mul] at h
-  linarith
+  -- linarith
+  apply nonneg_of_mul_nonneg_right
+  · exact h
+  · exact zero_lt_two
 end
