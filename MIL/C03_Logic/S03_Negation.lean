@@ -32,11 +32,25 @@ example (h : ∀ a, ∃ x, f x > a) : ¬FnHasUb f := by
   have : f x ≤ a := fnuba x
   linarith
 
-example (h : ∀ a, ∃ x, f x < a) : ¬FnHasLb f :=
-  sorry
+example (h : ∀ a, ∃ x, f x < a) : ¬FnHasLb f := by
+  intro fnlb
+  rcases fnlb with ⟨a, fnlba⟩
+  rcases h a with ⟨x, hx⟩
+  have : a ≤ f x := by exact fnlba x
+  linarith
 
-example : ¬FnHasUb fun x ↦ x :=
-  sorry
+example : ¬FnHasUb fun x ↦ x := by
+  -- rintro ⟨a, fnuba⟩
+  -- have : ∃x, x > a := by
+  --   use (a + 1)
+  --   linarith
+  -- rcases this with ⟨x, hx⟩
+  -- have : x ≤ a := by apply fnuba
+  -- linarith
+
+  rintro ⟨a, fnuba⟩
+  have : a + 1 ≤ a := by apply fnuba
+  linarith
 
 #check (not_le_of_gt : a > b → ¬a ≤ b)
 #check (not_lt_of_ge : a ≥ b → ¬a < b)
@@ -136,4 +150,3 @@ example (h : 0 < 0) : a > 37 := by
   contradiction
 
 end
-

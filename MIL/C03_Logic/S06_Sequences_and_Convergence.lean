@@ -7,7 +7,7 @@ def ConvergesTo (s : ℕ → ℝ) (a : ℝ) :=
   ∀ ε > 0, ∃ N, ∀ n ≥ N, |s n - a| < ε
 
 example : (fun x y : ℝ ↦ (x + y) ^ 2) = fun x y : ℝ ↦ x ^ 2 + 2 * x * y + y ^ 2 := by
-  ext
+  ext a b
   ring
 
 example (a b : ℝ) : |a| = |a - b + b| := by
@@ -35,7 +35,26 @@ theorem convergesTo_add {s t : ℕ → ℝ} {a b : ℝ}
   rcases cs (ε / 2) ε2pos with ⟨Ns, hs⟩
   rcases ct (ε / 2) ε2pos with ⟨Nt, ht⟩
   use max Ns Nt
-  sorry
+  intro n hn
+  have Ns_le_n : Ns ≤ n := by exact le_of_max_le_left hn
+  have Nt_le_n : Nt ≤ n := by exact le_of_max_le_right hn
+
+  calc
+    |s n + t n - (a + b)| = |s n - a + (t n - b)| := by
+      congr
+      ring
+    _ ≤ |s n - a| + |t n - b| := by
+      exact abs_add (s n - a) (t n - b)
+    _ < ε / 2 + ε / 2 := by
+      have h1 : |s n - a| < ε / 2 := by
+        apply hs
+        exact Ns_le_n
+      have h2 : |t n - b| < ε / 2 := by
+        apply ht
+        exact Nt_le_n
+      linarith
+    _ = ε := by norm_num
+
 
 theorem convergesTo_mul_const {s : ℕ → ℝ} {a : ℝ} (c : ℝ) (cs : ConvergesTo s a) :
     ConvergesTo (fun n ↦ c * s n) (c * a) := by
@@ -100,4 +119,3 @@ def ConvergesTo' (s : α → ℝ) (a : ℝ) :=
   ∀ ε > 0, ∃ N, ∀ n ≥ N, |s n - a| < ε
 
 end
-
