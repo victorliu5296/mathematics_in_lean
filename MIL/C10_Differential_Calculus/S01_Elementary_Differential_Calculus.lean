@@ -26,6 +26,16 @@ example {f g : ℝ → ℝ} {x : ℝ} (hf : DifferentiableAt ℝ f x) (hg : Diff
     deriv (f + g) x = deriv f x + deriv g x :=
   deriv_add hf hg
 
+/- Counterexample without the differentiability assumptions:
+f(x) = |x|
+g(x) = -|x| + x
+Then
+deriv f(0) = 0
+deriv g(0) = 0
+However,
+deriv (f + g)(0) = 1 ≠ deriv f(0) + deriv g(0) = 0.
+-/
+
 example {f : ℝ → ℝ} {a : ℝ} (h : IsLocalMin f a) : deriv f a = 0 :=
   h.deriv_eq_zero
 
