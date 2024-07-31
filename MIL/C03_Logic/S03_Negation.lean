@@ -58,20 +58,45 @@ example : ¬FnHasUb fun x ↦ x := by
 #check (le_of_not_gt : ¬a > b → a ≤ b)
 
 example (h : Monotone f) (h' : f a < f b) : a < b := by
-  sorry
+  apply lt_of_not_ge
+  intro a_ge_b
+  -- Absurd was not introduced at this point...
+  apply absurd h'
+  -- exact not_lt_of_ge (h a_ge_b)
+  exact not_lt.mpr (h a_ge_b)
 
 example (h : a ≤ b) (h' : f b < f a) : ¬Monotone f := by
-  sorry
+  apply not_le_of_gt at h'
+  intro h''
+  exact h' (h'' h)
+
+example (h : a ≤ b) (h' : f b < f a) : ¬Monotone f := by
+  intro h''
+  apply absurd h'
+  apply not_lt_of_ge
+  exact h'' h
 
 example : ¬∀ {f : ℝ → ℝ}, Monotone f → ∀ {a b}, f a ≤ f b → a ≤ b := by
   intro h
   let f := fun x : ℝ ↦ (0 : ℝ)
-  have monof : Monotone f := by sorry
+  have monof : Monotone f := by -- exact monotone_const
+    intro a b aleb
+    -- exact Preorder.le_refl (f a)
+    rfl
   have h' : f 1 ≤ f 0 := le_refl _
-  sorry
+  have h'' : (1 : ℝ) ≤ 0 := by
+    apply h
+    · exact monof
+    · exact h'
+  linarith only [h'']
 
 example (x : ℝ) (h : ∀ ε > 0, x < ε) : x ≤ 0 := by
-  sorry
+  apply le_of_not_gt
+  intro x_pos
+  have : x < x := by
+    apply h
+    exact x_pos
+  linarith
 
 end
 
@@ -79,16 +104,25 @@ section
 variable {α : Type*} (P : α → Prop) (Q : Prop)
 
 example (h : ¬∃ x, P x) : ∀ x, ¬P x := by
-  sorry
+  intro x Px
+  apply h
+  use x
 
 example (h : ∀ x, ¬P x) : ¬∃ x, P x := by
-  sorry
+  rintro ⟨x, Px⟩
+  exact h x Px
 
 example (h : ¬∀ x, P x) : ∃ x, ¬P x := by
-  sorry
+  by_contra h'
+  absurd h
+  intro x
+  by_contra h''
+  exact h' ⟨x, h''⟩
 
 example (h : ∃ x, ¬P x) : ¬∀ x, P x := by
-  sorry
+  intro hx
+  rcases h with ⟨x, Px⟩
+  exact Px (hx x)
 
 example (h : ¬∀ x, P x) : ∃ x, ¬P x := by
   by_contra h'
@@ -99,10 +133,14 @@ example (h : ¬∀ x, P x) : ∃ x, ¬P x := by
   exact h' ⟨x, h''⟩
 
 example (h : ¬¬Q) : Q := by
-  sorry
+  by_contra notQ
+  absurd h
+  exact notQ
 
 example (h : Q) : ¬¬Q := by
-  sorry
+  intro notQ
+  absurd h
+  exact notQ
 
 end
 
@@ -110,7 +148,14 @@ section
 variable (f : ℝ → ℝ)
 
 example (h : ¬FnHasUb f) : ∀ a, ∃ x, f x > a := by
-  sorry
+  intro a
+  by_contra h'
+  absurd h
+  use a
+  intro x
+  by_contra h''
+  have : f x > a := by exact lt_of_not_ge h''
+  exact h' ⟨x, this⟩
 
 example (h : ¬∀ a, ∃ x, f x > a) : FnHasUb f := by
   push_neg at h
@@ -122,7 +167,9 @@ example (h : ¬FnHasUb f) : ∀ a, ∃ x, f x > a := by
   exact h
 
 example (h : ¬Monotone f) : ∃ x y, x ≤ y ∧ f y < f x := by
-  sorry
+  dsimp only [Monotone] at h
+  push_neg at h
+  exact h
 
 example (h : ¬FnHasUb f) : ∀ a, ∃ x, f x > a := by
   contrapose! h
@@ -132,6 +179,35 @@ example (x : ℝ) (h : ∀ ε > 0, x ≤ ε) : x ≤ 0 := by
   contrapose! h
   use x / 2
   constructor <;> linarith
+
+example (x : ℝ) (h : ∀ ε > 0, x < ε) (h' : x ≠ 0) : x < 0 := by
+  contrapose! h
+  use x / 2
+  constructor
+  · apply lt_of_le_of_ne
+    · linarith
+    · field_simp
+      exact id (Ne.symm h')
+  · linarith
+
+example (x : ℝ) (h : ∀ ε > 0, x < ε) (h' : x ≠ 0) : x < 0 := by
+  contrapose! h
+  use x
+  constructor
+  · exact lt_of_le_of_ne h (id (Ne.symm h'))
+  · exact Preorder.le_refl x
+
+example (x : ℝ) (h : ∀ ε > 0, x < ε) (h' : x ≠ 0) : x < 0 := by
+  by_contra! hx
+  have := h (x/2) (by positivity) -- or by field_simp
+  linarith
+
+example (x : ℝ) (h : ∀ ε > 0, x < ε) (h' : x ≠ 0) : x < 0 := by
+  by_contra hx
+  have h1 : x ≥ 0 := le_of_not_lt hx
+  have h2 : x > 0 := lt_of_le_of_ne h1 (Ne.symm h')
+  have h3 := h (x / 2) (half_pos h2)
+  linarith
 
 end
 
