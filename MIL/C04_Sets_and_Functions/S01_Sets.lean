@@ -122,10 +122,44 @@ example : s ∪ s ∩ t = s := by
     exact xs
 
 example : s \ t ∪ t = s ∪ t := by
-  sorry
+  ext x
+  constructor
+  · rintro (⟨xs, xnt⟩ | xt)
+    · left
+      exact xs
+    · right
+      exact xt
+  . rintro (xs | xt)
+    · by_cases h : x ∈ t
+      · right
+        exact h
+      · left
+        trivial
+    · right
+      exact xt
 
 example : s \ t ∪ t \ s = (s ∪ t) \ (s ∩ t) := by
-  sorry
+  apply Subset.antisymm
+  · rintro x (⟨xs, xnt⟩ | xtns)
+    · constructor
+      · left
+        exact xs
+      · intro xnst
+        rcases xnst with ⟨_, xt⟩
+        exact xnt xt
+    · rcases xtns with ⟨xt, xns⟩
+      constructor
+      · right
+        exact xt
+      · rintro ⟨xs, _⟩
+        exact xns xs
+  · rintro x ⟨xs | xt, xnst⟩
+    · left
+      use xs
+      simp_all only [mem_inter_iff, true_and, not_false_eq_true]
+    · right
+      use xt
+      simp_all only [mem_inter_iff, and_true, not_false_eq_true]
 
 def evens : Set ℕ :=
   { n | Even n }
@@ -134,7 +168,7 @@ def odds : Set ℕ :=
   { n | ¬Even n }
 
 example : evens ∪ odds = univ := by
-  rw [evens, odds]
+  -- rw [evens, odds]
   ext n
   simp
   apply Classical.em
@@ -146,7 +180,14 @@ example (x : ℕ) : x ∈ (univ : Set ℕ) :=
   trivial
 
 example : { n | Nat.Prime n } ∩ { n | n > 2 } ⊆ { n | ¬Even n } := by
-  sorry
+  intro n
+  simp
+  intro h h' h''
+  have n_ne_two : n ≠ 2 := by exact Ne.symm (Nat.ne_of_lt h')
+  have n_mod_two : n % 2 = 0 := by exact Nat.even_iff.mp h''
+  have n_mod_two_ne_one : n % 2 ≠ 1 := by exact Nat.mod_two_ne_one.mpr n_mod_two
+  have n_two_or_prime := Nat.Prime.eq_two_or_odd h
+  rcases n_two_or_prime with (_ | _) <;> contradiction
 
 #print Prime
 
@@ -182,10 +223,18 @@ section
 variable (ssubt : s ⊆ t)
 
 example (h₀ : ∀ x ∈ t, ¬Even x) (h₁ : ∀ x ∈ t, Prime x) : ∀ x ∈ s, ¬Even x ∧ Prime x := by
-  sorry
+  intro x xs
+  have : x ∈ t := by exact ssubt xs
+  constructor
+  · exact h₀ x (ssubt xs)
+  · exact h₁ x (ssubt xs)
 
 example (h : ∃ x ∈ s, ¬Even x ∧ Prime x) : ∃ x ∈ t, Prime x := by
-  sorry
+  rcases h with ⟨x, xs, _, h₁⟩
+  use x
+  constructor
+  · exact ssubt xs
+  · exact h₁
 
 end
 
@@ -224,7 +273,29 @@ example : (⋂ i, A i ∩ B i) = (⋂ i, A i) ∩ ⋂ i, B i := by
 
 
 example : (s ∪ ⋂ i, A i) = ⋂ i, A i ∪ s := by
-  sorry
+  ext x
+  simp only [mem_union, mem_iInter]
+  constructor
+  -- · intro xs i
+  --   by_cases h : x ∈ s
+  --   · right
+  --     exact h
+  --   · left
+  --     rcases xs with (xs | xAi)
+  --     · contradiction
+  --     · exact xAi i
+  · rintro (xs | xAi)
+    · exact fun i ↦ Or.inr xs
+    · exact fun i ↦ Or.intro_left (x ∈ s) (xAi i)
+  · intro h
+    by_cases h' : x ∈ s
+    · left
+      exact h'
+    · right
+      intro i
+      rcases h i with (xAi | xs)
+      · exact xAi
+      · contradiction
 
 def primes : Set ℕ :=
   { x | Nat.Prime x }
@@ -245,7 +316,12 @@ example : (⋂ p ∈ primes, { x | ¬p ∣ x }) ⊆ { x | x = 1 } := by
   apply Nat.exists_prime_and_dvd
 
 example : (⋃ p ∈ primes, { x | x ≤ p }) = univ := by
-  sorry
+  apply eq_univ_of_forall
+  intro x
+  #check Nat.exists_infinite_primes
+  unfold primes
+  simp [And.comm]
+  exact Nat.exists_infinite_primes x
 
 end
 
