@@ -65,13 +65,29 @@ theorem convergesTo_mul_const {s : ℕ → ℝ} {a : ℝ} (c : ℝ) (cs : Conver
     rw [h]
     ring
   have acpos : 0 < |c| := abs_pos.mpr h
-  sorry
+  unfold ConvergesTo
+  intro ε hε
+  dsimp
+  have εcpos : 0 < ε / |c| := by field_simp; exact h
+  rcases cs (ε / |c|) εcpos with ⟨Ns, hs⟩
+  use Ns
+  intro n ngt
+  rw [← mul_sub, abs_mul]
+  norm_num at hs
+  exact (lt_div_iff' acpos).mp (hs n ngt)
 
 theorem exists_abs_le_of_convergesTo {s : ℕ → ℝ} {a : ℝ} (cs : ConvergesTo s a) :
     ∃ N b, ∀ n, N ≤ n → |s n| < b := by
   rcases cs 1 zero_lt_one with ⟨N, h⟩
   use N, |a| + 1
-  sorry
+  intro n ngt
+  have (k : ℕ): |s k| - |a| ≤ |s k - a| := by exact abs_sub_abs_le_abs_sub (s k) a
+  have : ∀ n, N ≤ n → |s n| - |a| < 1 := by
+    intro n ngt
+    apply lt_of_le_of_lt
+    apply this
+    exact h n ngt
+  exact lt_add_of_tsub_lt_left (this n ngt)
 
 theorem aux {s t : ℕ → ℝ} {a : ℝ} (cs : ConvergesTo s a) (ct : ConvergesTo t 0) :
     ConvergesTo (fun n ↦ s n * t n) 0 := by
@@ -81,7 +97,18 @@ theorem aux {s t : ℕ → ℝ} {a : ℝ} (cs : ConvergesTo s a) (ct : Converges
   have Bpos : 0 < B := lt_of_le_of_lt (abs_nonneg _) (h₀ N₀ (le_refl _))
   have pos₀ : ε / B > 0 := div_pos εpos Bpos
   rcases ct _ pos₀ with ⟨N₁, h₁⟩
-  sorry
+  use max N₀ N₁
+  intro n ngt
+  simp
+  rw [abs_mul]
+  have : |s n| * |t n| ≤ B * |t n| := by
+    apply mul_le_mul_of_nonneg_right _ (abs_nonneg t n)
+    exact le_of_lt (h₀ n (by linarith [ngt, le_max_left N₀ N₁]))
+  have : B * |t n| < ε := by
+    field_simp at h₁
+    have := h₁ n (by linarith [ngt, le_max_right N₀ N₁])
+    exact (lt_div_iff' Bpos).mp this
+  linarith
 
 theorem convergesTo_mul {s t : ℕ → ℝ} {a b : ℝ}
       (cs : ConvergesTo s a) (ct : ConvergesTo t b) :
@@ -91,7 +118,8 @@ theorem convergesTo_mul {s t : ℕ → ℝ} {a b : ℝ}
     convert convergesTo_add ct (convergesTo_const (-b))
     ring
   have := convergesTo_add h₁ (convergesTo_mul_const b cs)
-  convert convergesTo_add h₁ (convergesTo_mul_const b cs) using 1
+  -- convert convergesTo_add h₁ (convergesTo_mul_const b cs) using 1
+  convert this using 1
   · ext; ring
   ring
 
@@ -99,18 +127,23 @@ theorem convergesTo_unique {s : ℕ → ℝ} {a b : ℝ}
       (sa : ConvergesTo s a) (sb : ConvergesTo s b) :
     a = b := by
   by_contra abne
-  have : |a - b| > 0 := by sorry
+  have sub_pos : |a - b| > 0 := by exact abs_sub_pos.mpr abne
   let ε := |a - b| / 2
-  have εpos : ε > 0 := by
-    change |a - b| / 2 > 0
-    linarith
+  have εpos : 0 < ε := by
+    exact half_pos sub_pos
   rcases sa ε εpos with ⟨Na, hNa⟩
   rcases sb ε εpos with ⟨Nb, hNb⟩
   let N := max Na Nb
-  have absa : |s N - a| < ε := by sorry
-  have absb : |s N - b| < ε := by sorry
-  have : |a - b| < |a - b| := by sorry
-  exact lt_irrefl _ this
+  have absa : |s N - a| < ε := by exact hNa N (by exact le_max_left Na Nb)
+  have absb : |s N - b| < ε := by exact hNb N (by exact le_max_right Na Nb)
+  have lt_self : |a - b| < |a - b| := by
+    have : |a - b| = ε + ε := by ring
+    nth_rw 2 [this]
+    have : |a - b| ≤ |s N - a| + |s N - b| := by
+      have triangle_ineq : |a - b| ≤ |a - s N| + |s N - b| := abs_sub_le a (s N) b
+      linarith [abs_sub_comm a (s N)]
+    linarith
+  linarith
 
 section
 variable {α : Type*} [LinearOrder α]
